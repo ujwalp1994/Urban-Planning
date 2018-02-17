@@ -1,0 +1,768 @@
+//'use strict';
+var myApp = angular.module('MyApp')
+  myApp.controller('SearchController',function($http,$state,$scope,$auth,$modal,$location,$rootScope,ReportService){
+  var test = {};
+  var remarks= {};
+  console.log("2");
+  console.log($state.params.startDate);
+  var startdate=$state.params.startDate;
+ $scope.startDate = startdate.substring( 4, 15 );
+ var enddate=$state.params.endDate;
+ $scope.endDate= enddate.substring( 4, 15 );
+ console.log($scope.endDate);
+ $scope.eventid=$state.params.selected_items
+  console.log(ReportService);
+$scope.username=$rootScope.email;
+  $scope.formData = {}; 
+$scope.doTheBack = function() {
+  window.history.back();
+};
+$scope.open=false;
+   $scope.loading = true;
+   //$scope.exportload = false;
+  ReportService.fetchreports($state.params.startDate, $state.params.endDate, $state.params.text, $state.params.selected_items,$state.params.selected_groups)
+   .success(function(data){
+
+    $('#myModal').modal('hide');
+  // console.log(data.length);
+ if( data.length > 0 && data.length <200000){ 
+   console.log("start");
+   console.log("end");
+   $scope.currentPage = 0;
+    $scope.pageSize = 50;
+    $scope.data = data;
+
+    $scope.numberOfPages=function(){
+        return Math.ceil($scope.data.length/$scope.pageSize);
+    }
+   $scope.logs=data;
+   console.log(data);}
+    
+else if (  data.length >  200000)
+{
+   $scope.logs=data;
+   $('#myModalexport').modal('show');
+ 
+}
+
+    else
+    $scope.message="No Data Found" 
+   $scope.loading = false;
+   //$scope.exportload=false;
+
+ })
+  .error(function(data){
+    console.log('Error : ' + data);
+  });
+
+//$scope.exportfalse=function(){$scope.exportload=!$scope.exportload;  console.log("here");}
+
+ $scope.exportData1 = function (option) {
+   
+//     $scope.exportload = true;
+
+
+   console.log($scope.exporting);
+if(option==1)
+{
+var filename= 'Eventlog'+ $scope.startDate+'to'+$scope.endDate+'.xlsx';
+ alasql('SELECT ip,hostname,logeventid,timestp,source_network_address,source_port,user_name,caller_uname,logon_type,reason,remarks INTO XLSX("' + filename + '",{headers:true}) FROM ?',[$scope.logs]);
+   $('#myModalexport').modal('hide');
+ } 
+     //$scope.exportload = false;
+else{
+  console.log($scope.exporting);
+var field_name = "";
+  var counter = 20;
+ var columns = [
+    {title: "Hostname", dataKey: "hostname"},
+    {title: "IP", dataKey: "ip"},
+    {title: "EventTime", dataKey: "timestp"},
+    {title: "Source Network Address", dataKey: "source_network_address"},
+    {title: "SourcePort", dataKey:"source_port"},
+    {title: "Username", dataKey: "user_name"},
+    {title: "Caller  uname", dataKey: "caller_uname"},
+    {title: "LogonType", dataKey: "logon_type"},
+    {title: "Log EventId", dataKey: "logeventid"},
+    {title: "Reason", dataKey: "reason"},
+    {title: "Remarks", dataKey: "remarks"},
+    ];
+
+   var doc = new jsPDF('l', 'pt');
+/*doc.setFontSize(12);
+doc.setTextColor(100);
+doc.text("TGIM Eventlog Report From "+ $scope.startDate+" To " +$scope.endDate, 150, 30);
+
+doc.autoTable(columns, $scope.logs, {
+ //      startY: doc.autoTableEndPosY() + 40,
+        theme: 'grid',
+        overflow: 'linebreak',
+        columnWidth: 'wrap',
+         margin: {top: 50},
+        tableWidth: 'wrap',
+});*/
+
+var header = function (data) {
+        doc.setFontSize(25);
+        doc.setTextColor(255,250,250);
+        doc.setDrawColor(0);
+        doc.setFillColor(0,0,0);
+        doc.rect(60, 10, 750, 30, 'F');
+        doc.setFontStyle('normal');
+        doc.addImage(tgimdata, 'PNG', data.settings.margin.left, 10, 60, 30);
+        doc.addImage(headerImgdata, 'PNG', 750, 10, 60, 30);
+        doc.text("Windows Event Log Report  ", data.settings.margin.left + 200, 30);
+    };
+
+var totalPagesExp = "{total_pages_count_string}";
+
+     var footer = function (data) {
+    doc.setTextColor(0,0,0);
+        doc.setDrawColor(0);
+        doc.setFillColor(205,201,201);
+        doc.rect(40, 555, 700, 40, 'F');
+  
+      var curdate=new Date();
+        curdate=curdate.toString();
+        var str = "Page " + data.pageCount;
+                if (typeof doc.putTotalPages === 'function') {
+                             str = str;
+                                     }
+                                             doc.text(str, data.settings.margin.left +210, doc.internal.pageSize.height - 10);
+                         doc.text("TCS INTERNAL",data.settings.margin.left + 20, doc.internal.pageSize.height - 30);
+                          doc.text("Powered By: Internal IT Corp ESM Group",data.settings.margin.left + 160, doc.internal.pageSize.height - 30);
+                           doc.text("Produced By: TGIM",data.settings.margin.left + 200, doc.internal.pageSize.height - 20);
+                          doc.text(curdate,data.settings.margin.left + 400, doc.internal.pageSize.height - 30);
+                 };
+
+//doc.setFontSize(8);
+//doc.text("Eventid Selected "+ $scope.eventid, 170, 60);
+doc.setTextColor(0);
+
+doc.setFontSize(9);
+
+ doc.text("Event Log Report for "+  $scope.startDate+" To " +$scope.endDate, 40, 75);
+doc.setFont('helvetica','normal');
+doc.setFontSize(12);
+doc.text("Eventid Selected "+ $scope.eventid, 40, 60);
+
+//doc.setFontSize(12);
+// doc.text("Event Log Report for "+  $scope.startDate+" To " +$scope.endDate, 140, 60);
+//doc.text("Eventid Selected "+ $scope.eventid, 140, 75);
+
+var options = {
+        beforePageContent: header,
+        afterPageContent: footer,
+        margin: {top: 80},
+        theme: 'grid',
+        overflow: 'linebreak',
+        columnWidth: 'wrap',
+        tableWidth: 'wrap',
+
+    };
+doc.autoTable(columns, $scope.logs, options);
+
+   doc.save('EventLogReport.pdf');
+}
+}
+
+
+
+
+ $scope.exportData = function (option) {
+//  $scope.exportload=true;
+  console.log($scope.exportload);
+if(option== 1)
+{
+var filename= 'Eventlog'+ $scope.startDate+'to'+$scope.endDate+'.xlsx';
+console.log(filename);
+ alasql('SELECT ip,hostname,logeventid,timestp,impacted_account_name,admin_account_name,impacted_account_domain,admin_account_domain,reason,remarks INTO XLSX("' + filename + '",{headers:true}) FROM ?',[$scope.logs]);
+   $('#myModalexport').modal('hide');
+}
+//   $scope.exportload=false;
+else{ 
+var field_name = "";
+  var counter = 20;
+ var columns = [
+    {title: "Hostname", dataKey: "hostname"},
+    {title: "IP", dataKey: "ip"},
+    {title: "Event Time", dataKey: "timestp"},
+    {title: "Impacted Account", dataKey: "impacted_account_name"},
+    {title: "Admin Account", dataKey: "admin_account_name"},
+    {title: "Impacted Account Domain", dataKey: "impacted_account_domain"},
+    {title: "Admin Account Domain", dataKey: "admin_account_domain"},
+    {title: "Log EventId", dataKey: "logeventid"},
+    {title: "Reason", dataKey: "reason"},
+     {title: "Remarks", dataKey: "remarks"},
+    ];
+
+   var doc = new jsPDF('l', 'pt');
+var header = function (data) {
+        doc.setFontSize(25);
+        
+        doc.setTextColor(255,250,250);
+        doc.setDrawColor(0);
+        doc.setFillColor(0,0,0);
+        doc.rect(60, 10, 750, 30, 'F');
+        doc.setFontStyle('normal');
+        doc.addImage(tgimdata, 'PNG', data.settings.margin.left, 10, 60, 30);  
+        doc.addImage(headerImgdata, 'PNG', 750, 10, 60, 30);
+        doc.text("Windows Event Log Report ", data.settings.margin.left + 200, 30);
+    };
+
+var totalPagesExp = "{total_pages_count_string}";
+    var footer = function (data) {
+                doc.setTextColor(0,0,0);
+        doc.setDrawColor(0);
+        doc.setFillColor(205,201,201);
+        doc.rect(40, 555, 700, 40, 'F');
+
+           var curdate=new Date();
+        curdate=curdate.toString();
+        var str = "Page " + data.pageCount;
+                if (typeof doc.putTotalPages === 'function') {
+                             str = str; 
+                                     }
+                                             doc.text(str, data.settings.margin.left +210, doc.internal.pageSize.height - 10);
+                         doc.text("TCS INTERNAL",data.settings.margin.left + 20, doc.internal.pageSize.height - 30);
+                          doc.text("Powered By: Internal IT Corp ESM Group",data.settings.margin.left + 160, doc.internal.pageSize.height - 30);
+                           doc.text("Produced By: TGIM",data.settings.margin.left + 200, doc.internal.pageSize.height - 20);
+                          doc.text(curdate,data.settings.margin.left + 400, doc.internal.pageSize.height - 30);
+                 };
+
+//doc.setFontSize(8);
+//doc.text("Eventid Selected "+ $scope.eventid, 170, 60);
+doc.setTextColor(0);
+doc.setFontSize(9);
+
+ doc.text("Event Log Report for "+  $scope.startDate+" To " +$scope.endDate, 40, 75);
+doc.setFont('courier','normal');
+doc.setFontSize(12);
+doc.text("Eventid Selected "+ $scope.eventid, 40, 60);
+
+//doc.setFontSize(12);
+// doc.text("Event Log Report for "+  $scope.startDate+" To " +$scope.endDate, 140, 60);
+//doc.text("Eventid Selected "+ $scope.eventid, 140, 75);
+
+var options = {
+        beforePageContent: header,
+        afterPageContent: footer,
+        margin: {top: 80},
+        theme: 'grid',
+        overflow: 'linebreak',
+        columnWidth: 'wrap',
+        tableWidth: 'wrap',
+
+    };
+doc.autoTable(columns, $scope.logs, options);
+//       startY: doc.autoTableEndPosY() + 40,
+//        theme: 'grid',
+//        overflow: 'linebreak',
+//        columnWidth: 'wrap',
+  //      margin: {top: 50},
+    //    tableWidth: 'wrap',
+//);
+//$scope.exportload=false;
+
+   doc.save('EventLogReport.pdf');}
+//$scope.exportfalse();
+// console.log($scope.exportload);
+
+ }
+
+ $scope.exportData2 = function (option) {
+  //$scope.exportload=true;
+if(option==1){
+var filename= 'Eventlog'+ $scope.startDate+'to'+$scope.endDate+'.xlsx';  
+alasql('SELECT ip,hostname,logeventid,timestp,account_name,action_by,caller_domain,reason,remarks INTO XLSX("' + filename + '",{headers:true}) FROM ?',[$scope.logs]);
+   $('#myModalexport').modal('hide');}
+////////////////////
+else{
+var field_name = "";
+  var counter = 10;
+ var columns = [
+    {title: "Hostname", dataKey: "hostname"},
+    {title: "IP", dataKey: "ip"},
+    {title: "EventTime", dataKey: "timestp"},
+    {title: "Account Name", dataKey: "account_name"},
+    {title: "Action By", dataKey:"action_by"},
+    {title: "Caller Domain", dataKey: "caller_domain"},
+    {title: "LogEventId", dataKey: "logeventid"},
+    {title: "Reason", dataKey: "reason"},
+    {title: "Remarks", dataKey: "remarks"},
+    ];
+
+   var doc = new jsPDF('l', 'pt');
+/*doc.setFontSize(12);
+doc.setTextColor(100);
+doc.text("TGIM Eventlog Report From "+ $scope.startDate+" To " +$scope.endDate, 150, 30);
+
+doc.autoTable(columns, $scope.logs, {
+    //   startY: doc.autoTableEndPosY() + 40,
+        theme: 'grid',
+        overflow: 'linebreak',
+        columnWidth: 'wrap',
+        margin: {top: 50},
+        tableWidth: 'wrap',
+});
+ 
+*/
+
+var header = function (data) {
+        doc.setFontSize(25);
+        
+        doc.setTextColor(255,250,250);
+        doc.setDrawColor(0);
+        doc.setFillColor(0,0,0);
+        doc.rect(60, 10, 750, 30, 'F');
+        doc.setFontStyle('normal');
+        doc.addImage(tgimdata, 'PNG', data.settings.margin.left, 10, 60, 30);
+        doc.addImage(headerImgdata, 'PNG', 750, 10, 60, 30);
+        doc.text("Windows Event Log Report ", data.settings.margin.left + 200, 30);
+    };
+
+var totalPagesExp = "{total_pages_count_string}";
+            
+
+        var footer = function (data) {
+
+       doc.setTextColor(0,0,0);
+        doc.setDrawColor(0);
+        doc.setFillColor(205,201,201);
+        doc.rect(40, 555, 700, 40, 'F');
+
+        var curdate=new Date();
+        curdate=curdate.toString();
+        var str = "Page " + data.pageCount;
+                if (typeof doc.putTotalPages === 'function') {
+                             str = str;
+                                     }
+                                             doc.text(str, data.settings.margin.left +210, doc.internal.pageSize.height - 10);
+                         doc.text("TCS INTERNAL",data.settings.margin.left + 20, doc.internal.pageSize.height - 30);
+                          doc.text("Powered By: Internal IT Corp ESM Group",data.settings.margin.left + 160, doc.internal.pageSize.height - 30);
+                           doc.text("Produced By: TGIM",data.settings.margin.left + 200, doc.internal.pageSize.height - 20);
+                          doc.text(curdate,data.settings.margin.left + 400, doc.internal.pageSize.height - 30);
+                 };
+
+//doc.setFontSize(8);
+//doc.text("Eventid Selected "+ $scope.eventid, 170, 60);
+
+doc.setTextColor(0);
+
+doc.setFontSize(9);
+
+ doc.text("Event Log Report for "+  $scope.startDate+" To " +$scope.endDate, 40, 75);
+doc.setFont('helvetica','normal');
+doc.setFontSize(12);
+doc.text("Eventid Selected "+ $scope.eventid, 40, 60);
+
+//doc.setFontSize(12);
+// doc.text("Event Log Report for "+  $scope.startDate+" To " +$scope.endDate, 140, 60);
+//doc.text("Eventid Selected "+ $scope.eventid, 140, 75);
+
+var options = {
+        beforePageContent: header,
+        afterPageContent: footer,
+        margin: {top: 80},
+        theme: 'grid',
+        overflow: 'linebreak',
+        columnWidth: 'wrap',
+        tableWidth: 'wrap',
+
+    };
+doc.autoTable(columns, $scope.logs, options);
+   doc.save('EventLogReport.pdf');
+}
+////////////////
+ //  $scope.exportload=false;
+ }
+
+ $scope.exportData3 = function (option) {
+if(option==1)
+{
+ var filename= 'Eventlog'+ $scope.startDate+'to'+$scope.endDate+'.xlsx';
+  alasql('SELECT ip,hostname,logeventid,timestp,account_name,action_by,caller_domain,reason,remarks INTO XLSX("' + filename + '",{headers:true}) FROM ?',[$scope.logs]);
+   $('#myModalexport').modal('hide');}
+else{
+var field_name = "";
+  var counter = 20;
+ var columns = [
+    {title: "Hostname", dataKey: "hostname"},
+    {title: "IP", dataKey: "ip"},
+    {title: "EventTime", dataKey: "timestp"},
+    {title: "Account Name", dataKey: "account_name"},
+    {title: "Action By", dataKey:"action_by"},
+    {title: "Caller Domain", dataKey: "caller_domain"},
+    {title: "LogEventId", dataKey: "logeventid"},
+    {title: "Reason", dataKey: "reason"},
+    {title: "Remarks", dataKey: "remarks"},
+    ];
+
+   var doc = new jsPDF('l', 'pt');
+/*doc.setFontSize(12);
+doc.setTextColor(100);
+doc.text("TGIM Eventlog Report From "+ $scope.startDate+" To " +$scope.endDate, 150, 30);
+
+doc.autoTable(columns, $scope.logs, {
+      // startY: doc.autoTableEndPosY() + 40,
+        theme: 'grid',
+        overflow: 'linebreak',
+        columnWidth: 'wrap',
+        margin: {top: 50},
+        tableWidth: 'wrap',
+});
+ 
+*/
+
+var header = function (data) {
+        doc.setFontSize(25);
+        
+        doc.setTextColor(255,250,250);
+        doc.setDrawColor(0);
+        doc.setFillColor(0,0,0);
+        doc.rect(60, 10, 750, 30, 'F');
+        doc.setFontStyle('normal');
+        doc.addImage(tgimdata, 'PNG', data.settings.margin.left, 10, 60, 30);
+        doc.addImage(headerImgdata, 'PNG', 750, 10, 60, 30);
+        doc.text("Windows Event Log Report", data.settings.margin.left + 200, 30);
+    };
+
+var totalPagesExp = "{total_pages_count_string}";
+    var footer = function (data) {
+         doc.setTextColor(0,0,0);
+        doc.setDrawColor(0);
+        doc.setFillColor(205,201,201);
+        doc.rect(40, 555, 700, 40, 'F');
+    
+    var curdate=new Date();
+        curdate=curdate.toString();
+        var str = "Page " + data.pageCount;
+                if (typeof doc.putTotalPages === 'function') {
+                             str = str;
+                                     }
+                                             doc.text(str, data.settings.margin.left +210, doc.internal.pageSize.height - 10);
+                         doc.text("TCS INTERNAL",data.settings.margin.left + 20, doc.internal.pageSize.height - 30);
+                          doc.text("Powered By: Internal IT Corp ESM Group",data.settings.margin.left + 160, doc.internal.pageSize.height - 30);
+                           doc.text("Produced By: TGIM",data.settings.margin.left + 200, doc.internal.pageSize.height - 20);
+                          doc.text(curdate,data.settings.margin.left + 400, doc.internal.pageSize.height - 30);
+                 };
+
+//doc.setFontSize(8);
+//doc.text("Eventid Selected "+ $scope.eventid, 170, 60);
+doc.setTextColor(0);
+//doc.setFontSize(12);
+doc.setFontSize(9);
+
+ doc.text("Event Log Report for "+  $scope.startDate+" To " +$scope.endDate, 40, 75);
+doc.setFont('helvetica','normal');
+doc.setFontSize(12);
+doc.text("Eventid Selected "+ $scope.eventid, 40, 60);
+
+ //doc.text("Event Log Report for "+  $scope.startDate+" To " +$scope.endDate, 140, 60);
+//doc.text("Eventid Selected "+ $scope.eventid, 140, 75);
+
+var options = {
+        beforePageContent: header,
+        afterPageContent: footer,
+        margin: {top: 80},
+        theme: 'grid',
+        overflow: 'linebreak',
+        columnWidth: 'wrap',
+        tableWidth: 'wrap',
+
+    };
+doc.autoTable(columns, $scope.logs, options);
+   doc.save('EventLogReport.pdf');
+}
+
+ }
+
+ $scope.exportData4 = function (option) {
+if(option==1)
+{ 
+ 
+var filename= 'Eventlog'+ $scope.startDate+'to'+$scope.endDate+'.xlsx';
+ alasql('SELECT ip,hostname,logeventid,timestp,user_name,caller_uname,caller_domain,reason,remarks INTO XLSX("' + filename + '",{headers:true}) FROM ?',[$scope.logs]);
+   $('#myModalexport').modal('hide');
+}
+else{
+var field_name = "";
+  var counter = 20;
+ var columns = [
+    {title: "Hostname", dataKey: "hostname"},
+    {title: "IP", dataKey: "ip"},
+    {title: "EventTime", dataKey: "timestp"},
+    {title: "Username", dataKey: "user_name"},
+    {title: "Caller Domain", dataKey:"caller_domain"},
+    {title: "Calleruname", dataKey: "caller_uname"},
+    {title: "LogEventId", dataKey: "logeventid"},
+    {title: "Reason", dataKey: "reason"},
+    {title: "Remarks", dataKey: "remarks"},
+    ];
+
+   var doc = new jsPDF('l', 'pt');
+/*doc.setFontSize(12);
+doc.setTextColor(100);
+doc.text("TGIM Eventlog Report From "+ $scope.startDate+" To " +$scope.endDate, 150, 30);
+
+doc.autoTable(columns, $scope.logs, {
+//       startY: doc.autoTableEndPosY() + 40,
+//	startY: doc.autoTableEndPosY() + 40,
+        theme: 'grid',
+        overflow: 'linebreak',
+        columnWidth: 'wrap',
+        margin: {top: 50},
+        tableWidth: 'wrap',
+});
+*/ 
+
+var header = function (data) {
+        doc.setFontSize(25);
+        doc.setTextColor(255,250,250);
+        doc.setDrawColor(0);
+        doc.setFillColor(0,0,0); 
+        doc.rect(60, 10, 750, 30, 'F'); 
+        doc.setFontStyle('normal');
+        doc.addImage(tgimdata, 'PNG', data.settings.margin.left, 10, 60, 30);
+        doc.addImage(headerImgdata, 'PNG', 750, 10, 60, 30);
+        doc.text("Windows Event Log Report",data.settings.margin.left+200,30);
+    };
+
+var totalPagesExp = "{total_pages_count_string}";
+    var footer = function (data) {
+        doc.setTextColor(0,0,0);
+        doc.setDrawColor(0);
+        doc.setFillColor(205,201,201);
+        doc.rect(40, 555, 700, 35, 'F');
+  
+        var curdate=new Date();
+        curdate=curdate.toString();
+        var str = "Page " + data.pageCount;
+                if (typeof doc.putTotalPages === 'function') {
+                             str = str;
+                                     }
+                                             doc.text(str, data.settings.margin.left +210, doc.internal.pageSize.height - 10);
+                         doc.text("TCS INTERNAL",data.settings.margin.left + 20, doc.internal.pageSize.height - 30);
+                          doc.text("Powered By: Internal IT Corp ESM Group",data.settings.margin.left + 160, doc.internal.pageSize.height - 30);
+                           doc.text("Produced By: TGIM",data.settings.margin.left + 200, doc.internal.pageSize.height - 20);
+                          doc.text(curdate,data.settings.margin.left + 400, doc.internal.pageSize.height - 30);
+                 };
+
+doc.setFontSize(9);
+
+ doc.text("Event Log Report for "+  $scope.startDate+" To " +$scope.endDate, 40, 75);
+doc.setFont('helvetica','normal');
+doc.setFontSize(12);
+doc.text("Eventid Selected "+ $scope.eventid, 40, 60);
+
+var options = {
+        beforePageContent: header,
+        afterPageContent: footer,
+        margin: {top: 80},
+        theme: 'grid',
+        overflow: 'linebreak',
+        columnWidth: 'wrap',
+        tableWidth: 'wrap',
+
+    };
+doc.autoTable(columns, $scope.logs, options); 
+   doc.save('EventLogReport.pdf');
+}
+ }
+
+ $scope.openDropdown = function(){
+    $scope.selected_items = [];
+    
+  };
+
+
+  $scope.testModal=false;
+ $scope.togModal = function () {
+ test=$scope.formData.array1;
+          console.log("main"+test);
+        var test_remarks=[];
+        var first = JSON.stringify($scope.formData.array1);
+        var interid = first.split(",");
+        console.log(interid);
+        for (var i = 0; i < interid.length; i++) {
+         var interid_final = interid[i].toString();
+         var test1 = interid_final.split(":");
+         console.log(test1[1]);
+         var test_1 = test1[1].replace("}","");
+         console.log(test_1);
+        if(test_1 == "true")
+        {
+        test_remarks[0]=test_1;
+        break;
+        }
+        }
+        console.log(test_remarks);
+          if(test != undefined && test_remarks.length>0)
+	{
+
+ $scope.testModal = !$scope.testModal;
+  }
+	else {
+                alert('Please select the events before adding remarks.');
+                }
+  }
+ var newremark;
+  $scope.addRemarks=function()
+  {
+      console.log($scope.formData.remarks);
+
+
+	
+	$scope.testModal = false;
+          test=$scope.formData.array1;
+          console.log(test);
+	/*var test_remarks=[];  
+	var first = JSON.stringify($scope.formData.array1);
+        var interid = first.split(",");
+        console.log(interid);
+        for (var i = 0; i < interid.length; i++) {
+         var interid_final = interid[i].toString();
+         var test1 = interid_final.split(":");
+         console.log(test1[1]);
+         var test_1 = test1[1].replace("}","");
+         console.log(test_1);
+        if(test_1 == "true")
+        {
+        test_remarks[0]=test_1;
+        break;
+        }
+        }
+        console.log(test_remarks);
+	  if(test != undefined && test_remarks.length>0)
+	  {*/
+	   //if(test.length>0)
+	  //{
+	  console.log($scope.formData);
+          $scope.formData.id = test;
+          newremark=$scope.formData.remarks ;
+	  
+  	     ReportService.remarks(newremark,test)
+             .success(function(data){
+	     $('#myModalremark').modal('hide');
+             console.log(data);
+             for (var i = 0; i < $scope.logs.length; i++) {
+                for(var j=0; j < data.length; j++) {
+
+                if ($scope.logs[i]._id == data[j]){
+                  $scope.logs[i].remarks = newremark;
+		  console.log($scope.logs[i]._id);
+		  $scope.formData.array1[data[j]] = !$scope.formData.array1[data[j]]; 
+		  console.log($scope.formData.array1);
+		break;
+                }
+                //console.log($scope.formData.array1); 
+ }
+              
+               }
+		/*var first = JSON.stringify($scope.formData.array1);
+        var interid = first.split(",");
+        console.log(interid);
+        for (var i = 0; i < interid.length; i++) {
+         var interid_final = interid[i].toString();
+         var test1 = interid_final.split(":");
+         console.log(test1[1]);
+         var test_1 = test1[1].replace("}","");
+         console.log(test_1);
+	 test_remarks=[];
+        if(test_1 == "true")
+        {
+        test_remarks[0]=test_1;
+        break;
+        }
+	}
+	console.log(test_remarks);*/
+		})
+		
+		//test=undefined;
+		//}
+		
+	    //else {
+	//	  console.log("1");
+	//	alert('Please select the events before adding remarks.');
+	//	}
+	//	}
+	    /*else {
+                alert('Please select the events before adding remarks.');
+                }*/
+		/*var first = JSON.stringify($scope.formData.array1);
+        var interid = first.split(",");
+        console.log(interid);
+        for (var i = 0; i < interid.length; i++) {
+         var interid_final = interid[i].toString();
+         var test = interid_final.split(":");
+         console.log(test[1]);
+         var test_1 = test[1].replace("}","");
+         console.log(test_1);
+        if(test_1 == "true")
+	{
+	test_remarks[j]=test_1;
+	j++;
+	}*/
+		//console.log(test_remarks);
+		$scope.formData.remarks="";
+
+}
+
+
+
+$scope.togModal = function (title) {
+	test=$scope.formData.array1;
+          console.log(test);
+        var test_remarks=[];
+	if(test!=undefined)
+	{
+        var first = JSON.stringify($scope.formData.array1);
+        var interid = first.split(",");
+        console.log(interid);
+        for (var i = 0; i < interid.length; i++) {
+         var interid_final = interid[i].toString();
+         var test1 = interid_final.split(":");
+         console.log(test1[1]);
+         var test_1 = test1[1].replace("}","");
+         console.log(test_1);
+        if(test_1 == "true")
+        {
+        test_remarks[0]=test_1;
+        break;
+        }
+        }
+        console.log(test_remarks);
+          if(test_remarks.length>0)
+        {
+	console.log('in openModal');
+      $('#myModalremark').modal('show');
+ //$scope.testModal = !$scope.testModal;
+  }
+        else {
+                alert('Please select the events before adding remarks.');
+                }
+	}
+	else {
+		console.log("2");
+                alert('Please select the events before adding remarks.');
+                }
+//      console.log('in openModal');
+ //     $('#myModalremark').modal('show');
+
+                      };
+      
+});
+
+
+myApp.filter('startFrom', function() {
+    return function(input, start) {
+        if (!input || !input.length) { return; }
+        start = +start; //parse to int
+        return input.slice(start);
+    }
+});
+
+
+var tgimdata='data:image/png;base64,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'
+
+var headerImgdata='data:image/png;base64,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'
